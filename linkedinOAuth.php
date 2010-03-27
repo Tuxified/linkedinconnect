@@ -37,7 +37,7 @@ class LinkedInOAuth
     {
       $this->oauth_callback = $oauth_callback;
     }
-    echo " Oa_call:".$oauth_callback;
+    if($debug) { echo " Oa_call:".$oauth_callback; }
     $this->consumer = new OAuthConsumer($consumer_key, $consumer_secret, $this->oauth_callback);
     $this->signature_method = new OAuthSignatureMethod_HMAC_SHA1();
     $this->request_token_url = $this->secure_base_url . "/uas/oauth/requestToken";

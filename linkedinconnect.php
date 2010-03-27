@@ -8,13 +8,12 @@ Description: Integrate LinkedIn and Wordpress.  Provides single-signon using oAu
 Acknowledgments:  
 	Shannon Whitley( http://voiceoftech.com/swhitley/) - Twit Connect Plugin
 	Brooks Bennett (http://www.brooksskybennett.com/) - oAuth Popup
-	Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
-	Abraham Williams (http://github.com/abraham/twitteroauth/) - TwitterOAuth
 
-Version: 0.1
+Version: 0.2
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 28/12/2009 Tonći Galić - Initial Release
+2. 16/03/2010 Tonći Galić - almost done for first release
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -40,9 +39,9 @@ if(!version_compare(PHP_VERSION, '5.0.0', '<'))
     include dirname(__FILE__).'/linkedinOAuth.php';
 }
 
-$lic_btn_images = array(WP_PLUGIN_URL.'/linkedinconnect/images/linkedinconnect.png'
-                    , WP_PLUGIN_URL.'/linkedinconnect/images/linkedin_button_1_lo.gif'
-                    , WP_PLUGIN_URL.'/linkedinconnect/images/linkedin_signin.png'
+$lic_btn_images = array(WP_PLUGIN_URL.'/linkedinconnect/images/linkedin_signin.png'
+                    , WP_PLUGIN_URL.'/linkedinconnect/images/linkedin_button.gif'
+                    , WP_PLUGIN_URL.'/linkedinconnect/images/linkedinconnect.png'
                     );
 
 $lic_user_login_suffix = get_option("lic_user_login_suffix");
@@ -73,20 +72,6 @@ if($lic_share_this == 'Y')
     add_action('comment_post', 'lic_comment_post');
 }
 
-$lic_local = get_option("lic_local");
-//if($lic_local == 'Y')
-//{
-    $lic_url = get_option('siteurl');
-    $lic_page = '/index.php?lic_oauth_start=true';
-    $lic_a = '';
-//}
-//else
-//{
-//    $lic_url = 'http://mytweeple.com';
-//    $lic_page = 'lic.aspx';
-//    $lic_a = 'location.href+"#licbutton"';
-//}
-
 
 $lic_loaded = false;
 
@@ -99,13 +84,13 @@ function lic_init()
     {
         if(isset($_GET['lic_oauth_start']))
         {
-            echo "lic_oAuth_Start<br/>\n";
+            //echo "lic_oAuth_Start<br/>\n";
             lic_oAuth_Start();
         }
         /*
         if(isset($_GET['oauth_verifier']))
         {
-            echo "lic_LinkedInInfoGet<br/>\n";
+            //echo "lic_LinkedInInfoGet<br/>\n";
             lic_LinkedInInfoGet($_GET['oauth_verifier']);
         }
 
@@ -216,9 +201,24 @@ function lic_show_linkedin_connect_button($id='0',$type='comment')
         {
             if($lic_share_this == 'Y' && get_usermeta($user_ID, 'licid'))
             {
-                echo '<p class="lic-tweet-this"><input type="checkbox" id="lic_share_this" name="lic_share_this" style="width:auto" /> Tweet This Comment [<a href="javascript:none" title="Post this comment to LinkedIn">?</a>]</p>';
+
+			$post_title = strip_tags(get_the_title( $post->ID ));
+    			$blog_title = get_bloginfo('name');
+    
+    
+        		//Get the template for the update.
+        		$update = get_option("lic_share_this_text");
+        
+        		
+        		$temp_update = $update;
+			$temp_update = str_replace('%%post_title%%',$post_title, $temp_update);
+     		   	$temp_update = str_replace('%%blog_title%%',$blog_title, $temp_update);
+     		   	$temp_update = str_replace('%%shortlink%%', 'link to here', $temp_update);
+        
+       		$update = $temp_update;
+                echo '<p class="lic-share-this"><input type="checkbox" id="lic_share_this" name="lic_share_this" style="width:auto" /> Share This Comment [<a href="javascript:none" title="Share this comment on LinkedIn. Update will be: '.$update.'">?</a>]</p><p><input type="text" name="lic-share-this-text" max-size="140" value="" style="display:none"></p>';
             }
-            echo '<p>Update your email address: '.'<a name="licbutton" href="'.get_option('siteurl').'/wp-admin/profile.php">'.$user_email.'</a>.</p>';
+            //echo '<p>Update your email address: '.'<a name="licbutton" href="'.get_option('siteurl').'/wp-admin/profile.php">'.$user_email.'</a>.</p>';
             echo '<script type="text/javascript">'."\r\n";
             echo '<!--'."\r\n";
             echo 'if(!window.opener && document.getElementById("comment")){'."\r\n";
@@ -347,7 +347,7 @@ function lic_stylesheet_add() {
 //************************************************************************************
 //* lic_get_avatar
 //************************************************************************************
-function lic_get_avatar($avatar, $id_or_email='',$size='32') {
+function lic_get_avatar($avatar, $id_or_email='',$size='80') {
   global $comment, $lic_user_login_suffix;
 
   if(is_object($comment))
@@ -362,7 +362,7 @@ function lic_get_avatar($avatar, $id_or_email='',$size='32') {
   if (get_usermeta($id_or_email, 'licid'))
   {
     $user_info = get_userdata($id_or_email);
-    //$out = 'http://purl.org/net/spiurl/'. str_replace($lic_user_login_suffix,"",$user_info->user_login);
+    
     $avatar = "<img alt='' src='{$user_info->avatar}' class='avatar avatar-{$size}' height='{$size}' width='{$size}' />";
     return $avatar;
   } 
@@ -405,7 +405,7 @@ function lic_LinkedInInfoGet($req_key)
 //************************************************************************************
 //* lic_LinkedInInfoPost
 //************************************************************************************
-function lic_LinkedInInfoPost($req_key, $tweet)
+function lic_LinkedInInfoPost($req_key, $update)
 {
     global $lic_url, $lic_page;
 
@@ -417,7 +417,7 @@ function lic_LinkedInInfoPost($req_key, $tweet)
     $snoopy->agent = 'LinkedIn Connect (Snoopy)';
     $snoopy->host = $_SERVER[ 'HTTP_HOST' ];
     $snoopy->read_timeout = "180";
-    $url = $lic_url.'/'.$lic_page.'?lic_req_key='.urlencode($req_key).'&tweet='.urlencode($tweet);
+    $url = $lic_url.'/'.$lic_page.'?lic_req_key='.urlencode($req_key).'&update='.urlencode($update);
 
     if(@$snoopy->fetchtext($url))
     {
@@ -492,7 +492,7 @@ function lic_oAuth_Confirm()
     //$to = new TwitterOAuth($lic_consumer_key, $lic_consumer_secret, $_SESSION['linkedin_oauth_access_token'], $_SESSION['linkedin_oauth_access_token_secret']);
     /* Run request on linkedin API as user. */
 
-    $xml = $liclient->getProfile();
+    $xml = $liclient->getProfile("~:full");
     $linkedinInfo = new SimpleXMLElement($xml);
 
     $id = $linkedinInfo->id;
@@ -500,9 +500,9 @@ function lic_oAuth_Confirm()
     $name = $linkedinInfo->{'first-name'}." ". $linkedinInfo->{'last-name'};
     $avatar = $linkedinInfo->{'picture-url'};
     $url = "";
-    //$url = $linkedinInfo->site-standard-profile-request->url;
+    $url = $linkedinInfo->{'site-standard-profile-request'}->{'url'};
 
-    lic_Login($id.'|'.$name.'|'.$avatar.'|'.$url);
+    lic_Login($id.'|'.$linkedinInfo->{'first-name'}.'|'.$linkedinInfo->{'last-name'}.'|'.$avatar.'|'.$url);
 }
 
 //************************************************************************************
@@ -568,22 +568,22 @@ function lic_comment_post($comment_ID)
     
     if(!empty($shortlink))
     {
-        //Get the template for the tweet.
-        $tweet = get_option("lic_share_this_text");
+        //Get the template for the update.
+        $update = get_option("lic_share_this_text");
         
         //Determine characters available for post and blog title.
-        $temp_tweet = $tweet;
-        $temp_tweet = str_replace('%%post_title%%', '', $temp_tweet);
-        $temp_tweet = str_replace('%%blog_title%%', '', $temp_tweet);
-        $temp_tweet = str_replace('%%shortlink%%', '', $temp_tweet);
+        $temp_update = $update;
+        $temp_update = str_replace('%%post_title%%', '', $temp_update);
+        $temp_update = str_replace('%%blog_title%%', '', $temp_update);
+        $temp_update = str_replace('%%shortlink%%', '', $temp_update);
 
-        $tweet_len = strlen($temp_tweet);
-        if(strlen($post_title) + strlen($blog_title) + strlen($shortlink) + $tweet_len > 140)
+        $update_len = strlen($temp_update);
+        if(strlen($post_title) + strlen($blog_title) + strlen($shortlink) + $update_len > 140)
         {
             //Shorten the blog title.
             $ctr = strlen($blog_title) - 1;
             $shorter = false;
-            while(strlen($blog_title) > 10 && 140 < strlen($post_title) + strlen($blog_title) + 3 + strlen($shortlink) + $tweet_len)
+            while(strlen($blog_title) > 10 && 140 < strlen($post_title) + strlen($blog_title) + 3 + strlen($shortlink) + $update_len)
             {
                 $blog_title = substr($blog_title,0,$ctr--);  
                 $shorter = true;
@@ -594,7 +594,7 @@ function lic_comment_post($comment_ID)
             }
             $ctr = strlen($post_title) - 1;
             $shorter = false;
-            while(strlen($post_title) > 10 && 140 < strlen($post_title) + 3 + strlen($blog_title) + strlen($shortlink) + $tweet_len)
+            while(strlen($post_title) > 10 && 140 < strlen($post_title) + 3 + strlen($blog_title) + strlen($shortlink) + $update_len)
             {
                 $post_title = substr($post_title,0,$ctr--);  
                 $shorter = true;
@@ -604,34 +604,22 @@ function lic_comment_post($comment_ID)
                 $post_title.='...';
             }
         } 
-        $temp_tweet = $tweet;
-        $temp_tweet = str_replace('%%post_title%%',$post_title, $temp_tweet);
-        $temp_tweet = str_replace('%%blog_title%%',$blog_title, $temp_tweet);
-        $temp_tweet = str_replace('%%shortlink%%',$shortlink, $temp_tweet);
+        $temp_update = $update;
+        $temp_update = str_replace('%%post_title%%',$post_title, $temp_update);
+        $temp_update = str_replace('%%blog_title%%',$blog_title, $temp_update);
+        $temp_update = str_replace('%%shortlink%%',$shortlink, $temp_update);
         
-        $tweet = $temp_tweet;
-        if(strlen($tweet) <= 140)
+        $update = $temp_update;
+        if(strlen($update) <= 140)
         {
-            if($lic_local == 'Y')
-            {
-                $content = $liclient->setStatus($tweet);
-                /*
-                 *
-                //Create TwitterOAuth with app key/secret and user access key/secret
-                $to = new TwitterOAuth($lic_consumer_key, $lic_consumer_secret, $_SESSION['linkedin_oauth_access_token'], $_SESSION['linkedin_oauth_access_token_secret']);
+                $content = $liclient->setStatus($update);
                 //Run request on linkedin API as user.
-                $content = $to->OAuthRequest('https://linkedin.com/statuses/update.xml', array('status' => $tweet), 'POST');
-                 *
-                 */
-            }
-            else
-            {
-                //$content = lic_LinkedInInfoPost($_SESSION['lic_req_key'], $tweet);
-            }
-            if(strpos($content, 'status') === false && strpos($content, $tweet) === false)
+                //$content = $to->OAuthRequest('https://linkedin.com/statuses/update.xml', array('status' => $update), 'POST');
+            if(strpos($content, 'status') === false && strpos($content, $update) === false)
             {
                 wp_die('Your comment was submitted, but it could not be posted to LinkedIn.  '.$content);
             }
+		
         }
     }
 }
@@ -650,10 +638,10 @@ function lic_Login($pdvUserinfo)
 	}
 
 	//User login
-	$user_login_n_suffix = $userinfo[1].$lic_user_login_suffix;
+	$user_login_n_suffix = $userinfo[1]." ".$userinfo[2].$lic_user_login_suffix;
 
 	//Use the url from the LinkedIn profile.
-	$user_url = $userinfo[3];
+	$user_url = $userinfo[4];
 
 	$lic_use_linkedin_profile = get_option('lic_use_linkedin_profile');
 
@@ -666,10 +654,12 @@ function lic_Login($pdvUserinfo)
 	$userdata = array(
 		'user_pass' => wp_generate_password(),
 		'user_login' => $user_login_n_suffix,
-		'display_name' => $userinfo[1],
+		'display_name' => $userinfo[1]." ".$userinfo[2],
+		'first_name' => $userinfo[1],
+		'last_name' => $userinfo[2],
                 //'avatar' => $userinfo[2],
 		'user_url' => $user_url,
-		'user_email' => 'nomail@nomail.com'
+		'user_email' => 'onbekend@geen.nl'
 	);
 		
 	if(!function_exists('wp_insert_user'))
@@ -687,7 +677,9 @@ function lic_Login($pdvUserinfo)
 			if($wpuid)
 			{
 			    update_usermeta($wpuid, 'licid', "$userinfo[0]");
-                            update_usermeta($wpuid, 'avatar', "$userinfo[2]");
+                      update_usermeta($wpuid, 'avatar', "$userinfo[3]");
+			    update_usermeta($wpuid, 'user_url', "$user_url");
+	
 			}
 		}
 		else
@@ -699,12 +691,12 @@ function lic_Login($pdvUserinfo)
 	{
 		$user_obj = get_userdata($wpuid);
 
-		if($user_obj->display_name != $userinfo[2] || $user_obj->user_url != $userinfo[3])
+		if($user_obj->display_name != $userinfo[1]." ".$userinfo[2] || $user_obj->user_url != $userinfo[4])
 		{
 			$userdata = array(
 				'ID' => $wpuid,
-				'display_name' => $userinfo[2],
-				'user_url' => $userinfo[3],
+				'display_name' => $userinfo[1]." ".$userinfo[2],
+				'user_url' => $userinfo[4],
 			);
 			wp_update_user( $userdata );
 		}
@@ -784,7 +776,6 @@ KEEPME3;
 			update_option('lic_consumer_key', stripslashes($_POST["lic_consumer_key"]) );
 			update_option('lic_consumer_secret', stripslashes($_POST["lic_consumer_secret"]) );
             update_option('lic_btn_choice', $_POST["lic_btn_choice"]);
-            update_option('lic_local', $_POST["lic_local"]);
             update_option('lic_template', stripslashes($_POST["lic_template"]));
             update_option('lic_login_text', stripslashes($_POST["lic_login_text"]));
             update_option('lic_use_linkedin_profile', $_POST["lic_use_linkedin_profile"]);
@@ -821,7 +812,6 @@ KEEPME3;
 		$lic_before_login = get_option('lic_before_login');
         
         $lic_btn_choice = get_option('lic_btn_choice');
-        $lic_local = get_option('lic_local');
         $lic_user_login_suffix = get_option('lic_user_login_suffix');                                
         if(empty($lic_user_login_suffix))
         {
@@ -842,9 +832,6 @@ KEEPME3;
         $lic_add_to_login_page = $lic_add_to_login_page == 'Y' ?
     	"checked='true'" : "";
 
-        $lic_local = $lic_local == 'Y' ?
-	    "checked='true'" : "";
-		
         $lic_share_this = $lic_share_this == 'Y' ?
 	    "checked='true'" : "";
 		
@@ -856,40 +843,24 @@ KEEPME3;
             "checked='true'" : "";			
 
 ?>
-    <h3>Twit Connect Configuration</h3>
+    <h3>LinkedIn Connect Configuration</h3>
     <form action='' method='post' id='lic_conf'>
       <table cellspacing="20" width="60%">
 <?php if(!version_compare(PHP_VERSION, '5.0.0', '<')) : ?>        
         <tr>
-        <td valign="top">Self-Hosted oAuth</td>
-        <td>
-        <table>
-        <tr><td valign="top" width="5%">
-          <input type='checkbox' name='lic_local' value='Y' 
-            <?php echo $lic_local ?>/></td><td valign="top">
-            <small>Check this box to use your own API Key and Secret Key.</small>
-            <br/><small>For this option, you must register a new application at <a href="https://www.linkedin.com/secure/developer/">LinkedIn.com</a></small>
-            <br/><small>Help in filling out the registration can be found on the <a href="http://www.voiceoftech.com/swhitley/?page_id=706">LinkedIn Connect</a> page.</small>
-            </td></tr></table>
-          </td>
-        </tr>
-        <tr>
           <td width="20%" valign="top">API Key</td>
           <td>
             <input type='text' name='lic_consumer_key' value='<?php echo $lic_consumer_key ?>' size="50" />
-                <br/><small>
-                 (Necessary) Your application key from LinkedIn.com.
-                </small>
-              
+                <br/><small>(Necessary) Your application key from LinkedIn.com. </small>
+                <br/><small>For this option, you must register a new application at <a href="https://www.linkedin.com/secure/developer">LinkedIn.com</a></small>
+                <br/><small>Help in filling out the registration can be found on the <a href="http://www.voiceoftech.com/swhitley/?page_id=706">LinkedIn Connect</a> page.</small>  
           </td>
         </tr>
         <tr>
           <td width="20%" valign="top">Consumer Secret</td>
           <td>
             <input type='text' name='lic_consumer_secret' value='<?php echo $lic_consumer_secret ?>' size="50" />
-                <br/><small>
-                  (Necessary) Your secret key from LinkedIn.com.
-                </small>
+                <br/><small>(Necessary) Your secret key from LinkedIn.com.</small>
           </td>
         </tr>
         <tr><td colspan="2"><hr/></td></tr>
