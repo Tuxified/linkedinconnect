@@ -9,11 +9,12 @@ Acknowledgments:
 	Shannon Whitley( http://voiceoftech.com/swhitley/) - Twit Connect Plugin
 	Brooks Bennett (http://www.brooksskybennett.com/) - oAuth Popup
 
-Version: 0.2
+Version: 0.3
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 28/12/2009 Tonći Galić - Initial Release
 2. 16/03/2010 Tonći Galić - almost done for first release
+3. 01/06/2010 Tonći Galić - implementing changes of LinkedIn API
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -42,6 +43,10 @@ if(!version_compare(PHP_VERSION, '5.0.0', '<'))
 $lic_btn_images = array(WP_PLUGIN_URL.'/linkedinconnect/images/linkedin_signin.png'
                     , WP_PLUGIN_URL.'/linkedinconnect/images/linkedin_button.gif'
                     , WP_PLUGIN_URL.'/linkedinconnect/images/linkedinconnect.png'
+					, WP_PLUGIN_URL.'/linkedinconnect/images/log-in-linkedin-large.png'
+					, WP_PLUGIN_URL.'/linkedinconnect/images/log-in-linkedin-small.png'
+					, WP_PLUGIN_URL.'/linkedinconnect/images/linkedin-large.png'
+					, WP_PLUGIN_URL.'/linkedinconnect/images/linkedin-small.png'
                     );
 
 $lic_user_login_suffix = get_option("lic_user_login_suffix");
@@ -879,15 +884,22 @@ KEEPME3;
         <tr>
         <td valign="top">Select a Button</td>
         <td>
-        <table><tr><td width="5%">
-          <input type='radio' name='lic_btn_choice' value='1' 
-            <?php echo $btn1 ?>/></td><td><img src="<? echo $lic_btn_images[0] ?>" alt="" /></td></tr>
-            <tr><td>
-          <input type='radio' name='lic_btn_choice' value='2' 
-            <?php echo $btn2 ?>/></td><td><img src="<? echo $lic_btn_images[1] ?>" alt="" /></td></tr>
-            <tr><td>
-          <input type='radio' name='lic_btn_choice' value='3' 
-            <?php echo $btn3 ?>/></td><td> <img src="<? echo $lic_btn_images[2] ?>" alt="" /></td></tr>
+        <table>
+			<?php 
+			for($button_nr = 0, $nr_of_images = sizeof($lic_btn_images); $button_nr < $nr_of_images; $button_nr++  )
+			{
+			
+			?>
+			
+			<tr><td width="5%">
+				<input type='radio' name='lic_btn_choice' value='<?php echo $button_nr + 1 ?>' <?php echo (($lic_btn_choice - 1) == $button_nr)? "checked='true'" : ""; ?>/></td>
+				<td><img src="<? echo $lic_btn_images[$button_nr] ?>" alt="" /></td>
+			</tr>
+			<?
+			} //end for sizeof lic_btn_images 
+			?>
+			
+            
             </table>
           </td>
         </tr>

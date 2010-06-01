@@ -18,8 +18,8 @@ if ( !class_exists('Snoopy') )
 
 class LinkedInOAuth
 {
-  public $base_url = "http://api.linkedin.com";
-  public $secure_base_url = "https://api.linkedin.com";
+  public $base_url = "https://www.linkedin.com";
+  public $secure_base_url = "https://www.linkedin.com";
   public $oauth_callback = "oob";
   public $consumer;
   public $request_token;
@@ -42,7 +42,7 @@ class LinkedInOAuth
     $this->signature_method = new OAuthSignatureMethod_HMAC_SHA1();
     $this->request_token_url = $this->secure_base_url . "/uas/oauth/requestToken";
     $this->access_token_url = $this->secure_base_url . "/uas/oauth/accessToken";
-    $this->authorize_url = $this->secure_base_url . "/uas/oauth/authorize";
+    $this->authorize_url = $this->secure_base_url . "/uas/oauth/authenticate";
 
   }
 
